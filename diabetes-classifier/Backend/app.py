@@ -17,35 +17,36 @@ app.add_middleware(
 )
 
 # --------------------- MODELS TO LOAD ---------------------
-
 # Load diabetes type classifier
-type_model = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\type_model.pkl")
-le_type = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_type.pkl")  # Label encoder for diabetes type
+type_model = joblib.load("saved_models/type_model.pkl")
+le_type = joblib.load("saved_models/le_type.pkl")
 
 # Label encoders
-le_heart = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_heart.pkl")
-le_kidney = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_kidney.pkl")
-le_nerve = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_nerve.pkl")
-le_eye = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_eye.pkl")
-le_complication = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\le_complication.pkl")
+le_heart = joblib.load("saved_models/le_heart.pkl")
+le_kidney = joblib.load("saved_models/le_kidney.pkl")
+le_nerve = joblib.load("saved_models/le_nerve.pkl")
+le_eye = joblib.load("saved_models/le_eye.pkl")
+le_complication = joblib.load("saved_models/le_complication.pkl")
 
-# Complication Models
-# ------------------- TYPE 1 MODELS -------------------
-model_t1_heart = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 1 Diabetes_Heart_Disease_model.pkl")
-model_t1_kidney = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 1 Diabetes_Kidney_Issues_model.pkl")
-model_t1_nerve = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 1 Diabetes_Nerve_Damage_model.pkl")
-model_t1_eye = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 1 Diabetes_Eye_Problems_model.pkl")
-model_t1_complication = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 1 Diabetes_complication_model.pkl")
-
-# ------------------- TYPE 2 MODELS -------------------
-model_t2_heart = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 2 Diabetes_Heart_Disease_model.pkl")
-model_t2_kidney = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 2 Diabetes_Kidney_Issues_model.pkl")
-model_t2_nerve = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 2 Diabetes_Nerve_Damage_model.pkl")
-model_t2_eye = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 2 Diabetes_Eye_Problems_model.pkl")
-model_t2_complication = joblib.load(r"C:\Users\Dhrumil\Desktop\diabetes-classifier\Backend\saved_models\Type 2 Diabetes_complication_model.pkl")
+# Risk Models Dictionary
+risk_models = {
+    "Type 1 Diabetes": {
+        "Heart_Disease_": joblib.load("saved_models/Type 1 Diabetes_Heart_Disease_model.pkl"),
+        "Kidney_Issues": joblib.load("saved_models/Type 1 Diabetes_Kidney_Issues_model.pkl"),
+        "Nerve_Damage": joblib.load("saved_models/Type 1 Diabetes_Nerve_Damage_model.pkl"),
+        "Eye_Problems": joblib.load("saved_models/Type 1 Diabetes_Eye_Problems_model.pkl"),
+        "complication": joblib.load("saved_models/Type 1 Diabetes_complication_model.pkl"),
+    },
+    "Type 2 Diabetes": {
+        "Heart_Disease_": joblib.load("saved_models/Type 2 Diabetes_Heart_Disease_model.pkl"),
+        "Kidney_Issues": joblib.load("saved_models/Type 2 Diabetes_Kidney_Issues_model.pkl"),
+        "Nerve_Damage": joblib.load("saved_models/Type 2 Diabetes_Nerve_Damage_model.pkl"),
+        "Eye_Problems": joblib.load("saved_models/Type 2 Diabetes_Eye_Problems_model.pkl"),
+        "complication": joblib.load("saved_models/Type 2 Diabetes_complication_model.pkl"),
+    },
+}
 
 # --------------------- INPUT MODEL ---------------------
-
 class InputData(BaseModel):
     Age: float
     BMI: float
@@ -55,12 +56,11 @@ class InputData(BaseModel):
     Insulin_Level: float
     Autoantibody_Presence: int
 
-
 @app.post("/predict")
 def predict(input: InputData):
     try:
         # Create input array
-        features = np.array([
+        sample_input = np.array([
             input.Age,
             input.BMI,
             input.Fasting_Glucose,
@@ -71,42 +71,52 @@ def predict(input: InputData):
         ]).reshape(1, -1)
 
         # Predict Diabetes Type
-        type_pred = type_model.predict(features)
-        diabetes_type = le_type.inverse_transform(type_pred)[0]
+        type_pred = type_model.predict(sample_input)
+        type_label = le_type.inverse_transform(type_pred)[0]
 
-        # Select model set based on diabetes type
-        if diabetes_type == "Type 1 Diabetes":
-            heart_pred = le_heart.inverse_transform(model_t1_heart.predict(features))[0]
-            kidney_pred = le_kidney.inverse_transform(model_t1_kidney.predict(features))[0]
-            nerve_pred = le_nerve.inverse_transform(model_t1_nerve.predict(features))[0]
-            eye_pred = le_eye.inverse_transform(model_t1_eye.predict(features))[0]
-            complication_pred = le_complication.inverse_transform(model_t1_complication.predict(features))[0]
-        else:  # Type 2 Diabetes
-            heart_pred = le_heart.inverse_transform(model_t2_heart.predict(features))[0]
-            kidney_pred = le_kidney.inverse_transform(model_t2_kidney.predict(features))[0]
-            nerve_pred = le_nerve.inverse_transform(model_t2_nerve.predict(features))[0]
-            eye_pred = le_eye.inverse_transform(model_t2_eye.predict(features))[0]
-            complication_pred = le_complication.inverse_transform(model_t2_complication.predict(features))[0]
+        # Predict complications
+        models = risk_models[type_label]
+        heart_pred = le_heart.inverse_transform(models["Heart_Disease_"].predict(sample_input))[0]
+        kidney_pred = le_kidney.inverse_transform(models["Kidney_Issues"].predict(sample_input))[0]
+        nerve_pred = le_nerve.inverse_transform(models["Nerve_Damage"].predict(sample_input))[0]
+        eye_pred = le_eye.inverse_transform(models["Eye_Problems"].predict(sample_input))[0]
+        complication_pred = le_complication.inverse_transform(models["complication"].predict(sample_input))[0]
 
-        # Dummy Probability - you can replace with actual if models support it
-        overall_probability = 66.0  # for now, static or set from model output if supported
+        # Calculate Overall Probability
+        total_confidence = 0
+        count = 0
+        for label, encoder in zip(
+            ['Heart_Disease_', 'Kidney_Issues', 'Nerve_Damage', 'Eye_Problems'],
+            [le_heart, le_kidney, le_nerve, le_eye]
+        ):
+            model = models[label]
+            probs = model.predict_proba(sample_input)[0]
+            pred_idx = np.argmax(probs)
+            pred_label = encoder.inverse_transform([pred_idx])[0]
+            confidence = probs[pred_idx]
+
+            if pred_label != "None":
+                total_confidence += confidence
+                count += 1
+
+        overall_probability = (total_confidence / count) * 100 if count > 0 else 0.0
+        overall_probability = round(overall_probability, 1)
 
         return {
-            "Diabetes_Type": diabetes_type,
+            "Diabetes_Type": type_label,
             "Heart_Disease": heart_pred,
             "Kidney_Issues": kidney_pred,
             "Nerve_Damage": nerve_pred,
             "Eye_Problems": eye_pred,
             "Diabetes_Complications": complication_pred,
-            "Overall_Damage_Probability": f"{overall_probability:.1f}%"
+            "Overall_Damage_Probability": f"{overall_probability}%"
         }
 
     except Exception as e:
-        traceback.print_exc()  # Logs error to console
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# 👇 This runs the FastAPI server when executing `python app.py`
+# 👇 To run with: python app.py
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
